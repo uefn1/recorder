@@ -1,8 +1,10 @@
 name: Checker
 on:
-  schedule:
-    - cron: '*/10 * * * *'
   workflow_dispatch:
+    inputs:
+      dummy:
+        description: '手動起動用'
+        required: false
   push:
     paths:
       - queue.json
@@ -14,20 +16,20 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: 10分監視
+      - name: 60分監視
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
           sudo apt-get install -y jq -qq
           START=$(date +%s)
-          END=$((START + 600))
+          END=$((START + 3600))
 
           while [ $(date +%s) -lt $END ]; do
             git fetch origin main --quiet
@@ -67,7 +69,6 @@ jobs:
             git commit -m "dequeue $JST -> recorder" || true
             git push --quiet || continue
 
-            # GH_TOKENがあればログイン不要、そのままghで起動
             gh workflow run recorder.yml --ref main --field jst_datetime="$JST" --field duration_minutes="$DUR"
             echo "recorder起動完了"
           done
